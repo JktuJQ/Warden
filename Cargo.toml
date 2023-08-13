@@ -1,0 +1,25 @@
+[package]
+name = "warden"
+description = "Warden is a multifunctional discord bot that handles registrations, music, entertainment and more."
+readme = "README.md"
+repository = "https://github.com/JktuJQ/Warden"
+
+authors = ["JktuJQ <odmamontov@gmail.com>"]
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+keywords = ["warden", "discord", "bot", "rust"]
+categories = ["bot", "rust"]
+
+[dependencies]
+dotenv = { version = "0.15.0" }
+log = { version = "0.4.19" }
+log4rs = { version = "1.2.0", features = ["pattern_encoder"]}
+
+sqlx = { version = "0.7.1", features = ["runtime-tokio-native-tls", "sqlite"]}
+
+tokio = { version = "1.29.1", features = ["rt-multi-thread", "macros", "signal"] }
+
+serenity = { version = "0.11.6" }
+songbird = { git = "https://github.com/serenity-rs/songbird.git", branch = "current" } # Using git since one of dependencies from crates.io is broken
