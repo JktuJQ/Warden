@@ -7,6 +7,9 @@
 mod logger;
 use crate::logger::init_logger;
 
+mod db;
+use crate::db::init_db;
+
 mod bot;
 use crate::bot::Bot;
 
@@ -15,6 +18,7 @@ async fn main() {
     let _ = dotenv::from_filename("SETTINGS.env").ok();
 
     init_logger();
+    init_db().await;
 
     let main_token: String = dotenv::var("MAIN_DISCORD_TOKEN").expect("Token should be provided");
 

@@ -3,6 +3,7 @@
 
 // submodules
 pub mod events;
+pub mod settings;
 
 use serenity::{
     client::{Client, ClientBuilder},

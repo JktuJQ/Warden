@@ -23,4 +23,37 @@ impl EventHandler for Handler {
             &format!("{} is connected!", ready.user.name),
         );
     }
+
+    async fn guild_create(&self, _: Context, guild: Guild, _: bool) {
+        let connection: &SqlitePool = SERVERS_DB
+            .get()
+            .expect("Connection should be established at this point");
+
+        let guild_id: Id = guild.id.into();
+        if sqlx::query("SELECT discord_id FROM guilds WHERE discord_id = ?")
+            .bind(guild_id.to_string())
+            .fetch_optional(connection)
+            .await
+            .expect("Query should be correct")
+            .is_some()
+        {
+            logger::log(log::Level::Info, &format!("On {} guild ready", guild.name));
+            return;
+        }
+        sqlx::query(
+            "
+            INSERT INTO settings VALUES (NULL, NULL, NULL, NULL);
+            INSERT INTO guilds VALUES (?, (SELECT last_insert_rowid()));
+        ",
+        )
+        .bind(guild_id.to_string())
+        .execute(connection)
+        .await
+        .expect("Query should be correct");
+        logger::log(
+            log::Level::Info,
+            &format!("Registered {} guild", guild.name),
+        );
+        logger::log(log::Level::Info, &format!("On {} guild ready", guild.name));
+    }
 }
