@@ -96,4 +96,7 @@ pub struct Setting {
 
     #[sqlx(try_from = "Option<i64>", default)]
     pub music_order_channel_id: ForeignId,
+
+    #[sqlx(try_from = "Option<i64>", default)]
+    pub music_log_channel_id: ForeignId,
 }

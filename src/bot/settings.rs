@@ -27,7 +27,8 @@ use sqlx::SqlitePool;
 #[commands(
     set_log_channel,
     set_moderation_channel,
-    set_music_order_channel
+    set_music_order_channel,
+    set_music_log_channel,
 )]
 pub struct Settings;
 
@@ -67,3 +68,4 @@ macro_rules! setup_channel {
 setup_channel!(set_log_channel, log_channel);
 setup_channel!(set_moderation_channel, moderation_channel);
 setup_channel!(set_music_order_channel, music_order_channel);
+setup_channel!(set_music_log_channel, music_log_channel);

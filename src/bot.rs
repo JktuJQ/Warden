@@ -3,6 +3,7 @@
 
 // submodules
 pub mod events;
+pub mod music_playing;
 pub mod settings;
 
 use serenity::{
@@ -30,9 +31,6 @@ pub struct Bot {
     client: Client,
 }
 impl Bot {
-    /// Prefix of bot.
-    /// 
-    pub const PREFIX: &str = "-";
     /// Array of bot developers (owners).
     ///
     pub const OWNERS: [UserId; 1] = [UserId(290146364346597376)];
@@ -41,12 +39,13 @@ impl Bot {
     ///
     pub async fn new(
         token: String,
+        prefix: &str,
         groups: Vec<&'static CommandGroup>,
         event_handler: impl EventHandler + 'static,
         is_music: bool,
     ) -> Self {
         let mut framework: StandardFramework =
-            StandardFramework::new().configure(|c| c.prefix(Self::PREFIX).owners(Self::OWNERS.into()));
+            StandardFramework::new().configure(|c| c.prefix(prefix).owners(Self::OWNERS.into()));
         for group in groups {
             framework = framework.group(group);
         }

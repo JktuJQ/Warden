@@ -22,4 +22,4 @@ sqlx = { version = "0.7.1", features = ["runtime-tokio-native-tls", "sqlite"]}
 tokio = { version = "1.29.1", features = ["rt-multi-thread", "macros", "signal"] }
 
 serenity = { version = "0.11.6" }
-songbird = { git = "https://github.com/serenity-rs/songbird.git", branch = "current" } # Using git since one of dependencies from crates.io is broken
+songbird = { git = "https://github.com/serenity-rs/songbird.git", branch = "current", features = ["builtin-queue"] } # Using git since one of dependencies from crates.io is broken

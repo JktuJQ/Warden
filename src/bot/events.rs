@@ -57,3 +57,35 @@ impl EventHandler for Handler {
         logger::log(log::Level::Info, &format!("On {} guild ready", guild.name));
     }
 }
+
+
+pub struct MusicHandler1;
+#[async_trait]
+impl EventHandler for MusicHandler1 {
+    async fn ready(&self, _: Context, ready: Ready) {
+        logger::log(
+            log::Level::Info,
+            &format!("{} is connected!", ready.user.name),
+        );
+    }
+}
+pub struct MusicHandler2;
+#[async_trait]
+impl EventHandler for MusicHandler2 {
+    async fn ready(&self, _: Context, ready: Ready) {
+        logger::log(
+            log::Level::Info,
+            &format!("{} is connected!", ready.user.name),
+        );
+    }
+}
+pub struct MusicHandler3;
+#[async_trait]
+impl EventHandler for MusicHandler3 {
+    async fn ready(&self, _: Context, ready: Ready) {
+        logger::log(
+            log::Level::Info,
+            &format!("{} is connected!", ready.user.name),
+        );
+    }
+}
