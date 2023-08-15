@@ -24,17 +24,17 @@ async fn main() {
     init_db().await;
 
     let main_token: String = dotenv::var("MAIN_DISCORD_TOKEN").expect("Token should be provided");
-    let music1_token: String = dotenv::var("MUSIC1_DISCORD_TOKEN").expect("Token should be provided");
-    let music2_token: String = dotenv::var("MUSIC2_DISCORD_TOKEN").expect("Token should be provided");
-    let music3_token: String = dotenv::var("MUSIC3_DISCORD_TOKEN").expect("Token should be provided");
+    let music1_token: String =
+        dotenv::var("MUSIC1_DISCORD_TOKEN").expect("Token should be provided");
+    let music2_token: String =
+        dotenv::var("MUSIC2_DISCORD_TOKEN").expect("Token should be provided");
+    let music3_token: String =
+        dotenv::var("MUSIC3_DISCORD_TOKEN").expect("Token should be provided");
 
     let mut main_bot: Bot = Bot::new(
         main_token,
         MAIN_BOT_PREFIX,
-        vec![
-            &bot::GENERAL_GROUP,
-            &bot::settings::SETTINGS_GROUP,
-        ],
+        vec![&bot::GENERAL_GROUP, &bot::settings::SETTINGS_GROUP],
         bot::events::Handler,
         false,
     )
@@ -42,9 +42,7 @@ async fn main() {
     let mut music1_bot: Bot = Bot::new(
         music1_token,
         MUSIC_BOT_PREFIXES[0],
-        vec![
-            
-        ],
+        vec![],
         bot::events::MusicHandler1,
         true,
     )
@@ -52,9 +50,7 @@ async fn main() {
     let mut music2_bot: Bot = Bot::new(
         music2_token,
         MUSIC_BOT_PREFIXES[1],
-        vec![
-            
-        ],
+        vec![],
         bot::events::MusicHandler2,
         true,
     )
@@ -62,9 +58,7 @@ async fn main() {
     let mut music3_bot: Bot = Bot::new(
         music3_token,
         MUSIC_BOT_PREFIXES[2],
-        vec![
-            
-        ],
+        vec![],
         bot::events::MusicHandler3,
         true,
     )
@@ -81,7 +75,10 @@ async fn main() {
         if let Err(error) = music1_bot.run().await {
             logger::log(
                 log::Level::Error,
-                &format!("An error occurred while running the music2_bot: {:?}", error),
+                &format!(
+                    "An error occurred while running the music2_bot: {:?}",
+                    error
+                ),
             );
         };
     });
@@ -89,7 +86,10 @@ async fn main() {
         if let Err(error) = music2_bot.run().await {
             logger::log(
                 log::Level::Error,
-                &format!("An error occurred while running the music2_bot: {:?}", error),
+                &format!(
+                    "An error occurred while running the music2_bot: {:?}",
+                    error
+                ),
             );
         };
     });
@@ -97,7 +97,10 @@ async fn main() {
         if let Err(error) = music3_bot.run().await {
             logger::log(
                 log::Level::Error,
-                &format!("An error occurred while running the music3_bot: {:?}", error),
+                &format!(
+                    "An error occurred while running the music3_bot: {:?}",
+                    error
+                ),
             );
         };
     });

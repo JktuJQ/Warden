@@ -28,7 +28,7 @@ use sqlx::SqlitePool;
     set_log_channel,
     set_moderation_channel,
     set_music_order_channel,
-    set_music_log_channel,
+    set_music_log_channel
 )]
 pub struct Settings;
 
