@@ -13,8 +13,7 @@ impl From<String> for MusicOrder {
     fn from(value: String) -> Self {
         if value.starts_with("https://") {
             MusicOrder::Url(value)
-        }
-        else {
+        } else {
             MusicOrder::Query(value)
         }
     }
@@ -136,6 +135,6 @@ pub async fn stop(ctx: &Context, message: &Message) {
     if let Some(handler_lock) = manager.get(guild.id) {
         let handler = handler_lock.lock().await;
         let queue = handler.queue();
-        let _ = queue.stop();
+        queue.stop();
     }
 }

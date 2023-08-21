@@ -109,7 +109,7 @@ impl EventHandler for MusicHandler1 {
         let command: Vec<&str> = message.content.split_whitespace().collect::<Vec<&str>>();
         match command[1] {
             "play" => play(&ctx, &message, MusicOrder::from(command[2..].join(" "))).await,
-            "join" =>
+            "join" => {
                 join(
                     &ctx,
                     &message,
@@ -119,7 +119,8 @@ impl EventHandler for MusicHandler1 {
                             .expect("Correct id should be given"),
                     ),
                 )
-                .await,
+                .await
+            }
             "leave" => leave(&ctx, &message).await,
             "pause" => pause(&ctx, &message).await,
             "resume" => resume(&ctx, &message).await,
@@ -153,7 +154,7 @@ impl EventHandler for MusicHandler2 {
         let command: Vec<&str> = message.content.split_whitespace().collect::<Vec<&str>>();
         match command[1] {
             "play" => play(&ctx, &message, MusicOrder::from(command[2..].join(" "))).await,
-            "join" =>
+            "join" => {
                 join(
                     &ctx,
                     &message,
@@ -163,7 +164,8 @@ impl EventHandler for MusicHandler2 {
                             .expect("Correct id should be given"),
                     ),
                 )
-                .await,
+                .await
+            }
             "leave" => leave(&ctx, &message).await,
             "pause" => pause(&ctx, &message).await,
             "resume" => resume(&ctx, &message).await,
@@ -197,7 +199,7 @@ impl EventHandler for MusicHandler3 {
         let command: Vec<&str> = message.content.split_whitespace().collect::<Vec<&str>>();
         match command[1] {
             "play" => play(&ctx, &message, MusicOrder::from(command[2..].join(" "))).await,
-            "join" =>
+            "join" => {
                 join(
                     &ctx,
                     &message,
@@ -207,7 +209,8 @@ impl EventHandler for MusicHandler3 {
                             .expect("Correct id should be given"),
                     ),
                 )
-                .await,
+                .await
+            }
             "leave" => leave(&ctx, &message).await,
             "pause" => pause(&ctx, &message).await,
             "resume" => resume(&ctx, &message).await,

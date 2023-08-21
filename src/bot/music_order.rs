@@ -56,10 +56,7 @@ async fn get_music_log_channel(guild_id: GuildId) -> Option<ChannelId> {
         .expect("Connection should be established at this moment");
 
     let Setting { id: _, moderation_channel_id: _, log_channel_id: _, music_order_channel_id: _, music_log_channel_id } = sqlx::query_as::<_, Setting>("SELECT music_log_channel_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
-    match music_log_channel_id.0 {
-        Some(channel_id) => Some(ChannelId(channel_id)),
-        None => None,
-    }
+    music_log_channel_id.0.map(ChannelId)
 }
 
 #[command]
@@ -102,6 +99,23 @@ pub async fn play(ctx: &Context, message: &Message, args: Args) -> CommandResult
             channel_id
                 .say(&ctx.http, format!("{}play {}", prefix, order))
                 .await?;
+            message
+                .channel_id
+                .say(
+                    &ctx.http,
+                    format!(
+                        "➡️ 🎵 Playing 🎶{}🎶 song on '{}' voice channel!!! ⬅️",
+                        order,
+                        voice_channel_id
+                            .to_channel(&ctx.http)
+                            .await
+                            .expect("Channel exists on this guild")
+                            .guild()
+                            .expect("This channel is on guild")
+                            .name
+                    ),
+                )
+                .await?;
             logger::log_discord(&ctx.http, guild_id, &format!("Called play on {}", prefix)).await;
         }
     }
@@ -130,7 +144,14 @@ pub async fn join(ctx: &Context, message: &Message, _: Args) -> CommandResult {
     }
     let voice_channel_id: ChannelId = voice_channel_id.expect("None case was handled");
 
-    if sqlx::query("SELECT * FROM music_bots WHERE guild_id = ? AND on_channel_id = ?").bind(guild_id.to_string()).bind(voice_channel_id.to_string()).fetch_optional(connection).await.expect("Query should be correct").is_some() {
+    if sqlx::query("SELECT * FROM music_bots WHERE guild_id = ? AND on_channel_id = ?")
+        .bind(guild_id.to_string())
+        .bind(voice_channel_id.to_string())
+        .fetch_optional(connection)
+        .await
+        .expect("Query should be correct")
+        .is_some()
+    {
         return Ok(());
     }
     let music_bot: Option<MusicBot> = sqlx::query_as::<_, MusicBot>(
@@ -150,13 +171,31 @@ pub async fn join(ctx: &Context, message: &Message, _: Args) -> CommandResult {
             channel_id
                 .say(
                     &ctx.http,
-                    format!("{}join {}", prefix, voice_channel_id.to_string()),
+                    format!("{}join {}", prefix, voice_channel_id),
                 )
                 .await?;
-            sqlx::query("
+            message
+                .channel_id
+                .say(
+                    &ctx.http,
+                    format!(
+                        "➡️ 👍 Joined '{}' voice channel!!! ⬅️",
+                        voice_channel_id
+                            .to_channel(&ctx.http)
+                            .await
+                            .expect("Channel exists on this guild")
+                            .guild()
+                            .expect("This channel is on guild")
+                            .name
+                    ),
+                )
+                .await?;
+            sqlx::query(
+                "
                 INSERT INTO channels VALUES (?);
                 UPDATE music_bots SET on_channel_id = ? WHERE guild_id = ? AND prefix = ?;
-            ")
+            ",
+            )
             .bind(voice_channel_id.to_string())
             .bind(voice_channel_id.to_string())
             .bind(guild_id.to_string())
@@ -210,16 +249,30 @@ pub async fn leave(ctx: &Context, message: &Message, _: Args) -> CommandResult {
             channel_id
                 .say(
                     &ctx.http,
-                    format!("{}leave {}", prefix, voice_channel_id.to_string()),
+                    format!("{}leave {}", prefix, voice_channel_id),
                 )
                 .await?;
-            sqlx::query(
-                "DELETE FROM channels WHERE discord_id = ?",
-            )
-            .bind(voice_channel_id.to_string())
-            .execute(connection)
-            .await
-            .expect("Query should be correct");
+            message
+                .channel_id
+                .say(
+                    &ctx.http,
+                    format!(
+                        "➡️ 😔 Left '{}' voice channel :( ⬅️",
+                        voice_channel_id
+                            .to_channel(&ctx.http)
+                            .await
+                            .expect("Channel exists on this guild")
+                            .guild()
+                            .expect("This channel is on guild")
+                            .name
+                    ),
+                )
+                .await?;
+            sqlx::query("DELETE FROM channels WHERE discord_id = ?")
+                .bind(voice_channel_id.to_string())
+                .execute(connection)
+                .await
+                .expect("Query should be correct");
             logger::log_discord(&ctx.http, guild_id, &format!("Called leave on {}", prefix)).await;
         }
     }
@@ -269,6 +322,13 @@ macro_rules! no_args_command {
                         .say(
                             &ctx.http,
                             format!(concat!("{}", stringify!($fullname)), prefix),
+                        )
+                        .await?;
+                    message
+                        .channel_id
+                        .say(
+                            &ctx.http,
+                            concat!("➡️ Called ", stringify!($fullname), " on current queue!!! ⬅️"),
                         )
                         .await?;
                     logger::log_discord(
