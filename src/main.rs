@@ -34,7 +34,11 @@ async fn main() {
     let mut main_bot: Bot = Bot::new(
         main_token,
         MAIN_BOT_PREFIX,
-        vec![&bot::GENERAL_GROUP, &bot::settings::SETTINGS_GROUP],
+        vec![
+            &bot::GENERAL_GROUP,
+            &bot::settings::SETTINGS_GROUP,
+            &bot::music_order::MUSICORDER_GROUP,
+        ],
         bot::events::Handler,
         false,
     )

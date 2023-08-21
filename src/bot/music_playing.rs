@@ -5,7 +5,22 @@ use serenity::{
 };
 use std::sync::Arc;
 
-pub async fn play(ctx: &Context, message: &Message, url: &str) {
+pub enum MusicOrder {
+    Url(String),
+    Query(String),
+}
+impl From<String> for MusicOrder {
+    fn from(value: String) -> Self {
+        if value.starts_with("https://") {
+            MusicOrder::Url(value)
+        }
+        else {
+            MusicOrder::Query(value)
+        }
+    }
+}
+
+pub async fn play(ctx: &Context, message: &Message, order: MusicOrder) {
     let guild: Guild = message
         .guild(&ctx.cache)
         .expect("This will be called only from guilds");
@@ -18,7 +33,10 @@ pub async fn play(ctx: &Context, message: &Message, url: &str) {
     if let Some(handler_lock) = manager.get(guild.id) {
         let mut handler = handler_lock.lock().await;
 
-        let source = match songbird::input::ytdl(url).await {
+        let source = match match order {
+            MusicOrder::Url(url) => songbird::input::ytdl(url).await,
+            MusicOrder::Query(query) => songbird::input::ytdl_search(query).await,
+        } {
             Ok(source) => source,
             Err(why) => {
                 logger::log(log::Level::Info, &format!("Error sourcing ffmpeg: {}", why));

@@ -100,3 +100,15 @@ pub struct Setting {
     #[sqlx(try_from = "Option<i64>", default)]
     pub music_log_channel_id: ForeignId,
 }
+
+#[derive(Debug, FromRow)]
+pub struct MusicBot {
+    #[sqlx(try_from = "i64", default)]
+    pub guild_id: Id,
+
+    #[sqlx(default)]
+    pub prefix: String,
+
+    #[sqlx(try_from = "Option<i64>", default)]
+    pub on_channel_id: ForeignId,
+}

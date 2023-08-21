@@ -3,6 +3,7 @@
 
 // submodules
 pub mod events;
+pub mod music_order;
 pub mod music_playing;
 pub mod settings;
 

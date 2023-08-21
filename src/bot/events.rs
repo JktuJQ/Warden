@@ -51,10 +51,14 @@ impl EventHandler for Handler {
         }
         sqlx::query(
             "
-            INSERT INTO settings VALUES (NULL, NULL, NULL, NULL);
+            INSERT INTO settings VALUES (NULL, NULL, NULL, NULL, NULL);
             INSERT INTO guilds VALUES (?, (SELECT last_insert_rowid()));
+            INSERT INTO music_bots VALUES (?, 'music1 ', 0, NULL), (?, 'music2 ', 0, NULL), (?, 'music3 ', 0, NULL);
         ",
         )
+        .bind(guild_id.to_string())
+        .bind(guild_id.to_string())
+        .bind(guild_id.to_string())
         .bind(guild_id.to_string())
         .execute(connection)
         .await
@@ -72,12 +76,10 @@ pub async fn check_music_log_channel(guild_id: GuildId, channel_id: ChannelId) -
         .get()
         .expect("Connection should be established at this moment");
 
-    let setting: Option<Setting> = sqlx::query_as::<_, Setting>("SELECT music_log_channel_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(guild_id.to_string()).fetch_optional(connection).await.expect("Query should be correct");
-    if let Some(setting) = setting {
-        if let Some(music_log_channel_id) = setting.music_log_channel_id.0 {
-            if music_log_channel_id == channel_id.0 {
-                return true;
-            }
+    let Setting { id: _, moderation_channel_id: _, log_channel_id: _, music_order_channel_id: _, music_log_channel_id } = sqlx::query_as::<_, Setting>("SELECT music_log_channel_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
+    if let Some(music_log_channel_id) = music_log_channel_id.0 {
+        if music_log_channel_id == channel_id.0 {
+            return true;
         }
     }
     false
@@ -100,16 +102,14 @@ impl EventHandler for MusicHandler1 {
                 message.channel_id,
             )
             .await
-            || !message.content.starts_with("music1 ")
+            || !message.content.starts_with(crate::MUSIC_BOT_PREFIXES[0])
         {
             return;
         }
         let command: Vec<&str> = message.content.split_whitespace().collect::<Vec<&str>>();
         match command[1] {
-            "play" => {
-                play(&ctx, &message, command[2]).await;
-            }
-            "join" => {
+            "play" => play(&ctx, &message, MusicOrder::from(command[2..].join(" "))).await,
+            "join" =>
                 join(
                     &ctx,
                     &message,
@@ -119,8 +119,7 @@ impl EventHandler for MusicHandler1 {
                             .expect("Correct id should be given"),
                     ),
                 )
-                .await
-            }
+                .await,
             "leave" => leave(&ctx, &message).await,
             "pause" => pause(&ctx, &message).await,
             "resume" => resume(&ctx, &message).await,
@@ -147,16 +146,14 @@ impl EventHandler for MusicHandler2 {
                 message.channel_id,
             )
             .await
-            || !message.content.starts_with("music2 ")
+            || !message.content.starts_with(crate::MUSIC_BOT_PREFIXES[1])
         {
             return;
         }
         let command: Vec<&str> = message.content.split_whitespace().collect::<Vec<&str>>();
         match command[1] {
-            "play" => {
-                play(&ctx, &message, command[2]).await;
-            }
-            "join" => {
+            "play" => play(&ctx, &message, MusicOrder::from(command[2..].join(" "))).await,
+            "join" =>
                 join(
                     &ctx,
                     &message,
@@ -166,8 +163,7 @@ impl EventHandler for MusicHandler2 {
                             .expect("Correct id should be given"),
                     ),
                 )
-                .await
-            }
+                .await,
             "leave" => leave(&ctx, &message).await,
             "pause" => pause(&ctx, &message).await,
             "resume" => resume(&ctx, &message).await,
@@ -194,16 +190,14 @@ impl EventHandler for MusicHandler3 {
                 message.channel_id,
             )
             .await
-            || !message.content.starts_with("music3 ")
+            || !message.content.starts_with(crate::MUSIC_BOT_PREFIXES[2])
         {
             return;
         }
         let command: Vec<&str> = message.content.split_whitespace().collect::<Vec<&str>>();
         match command[1] {
-            "play" => {
-                play(&ctx, &message, command[2]).await;
-            }
-            "join" => {
+            "play" => play(&ctx, &message, MusicOrder::from(command[2..].join(" "))).await,
+            "join" =>
                 join(
                     &ctx,
                     &message,
@@ -213,8 +207,7 @@ impl EventHandler for MusicHandler3 {
                             .expect("Correct id should be given"),
                     ),
                 )
-                .await
-            }
+                .await,
             "leave" => leave(&ctx, &message).await,
             "pause" => pause(&ctx, &message).await,
             "resume" => resume(&ctx, &message).await,
