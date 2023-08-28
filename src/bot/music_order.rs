@@ -41,7 +41,7 @@ async fn check_music_order_channel(
         .get()
         .expect("Connection should be established at this moment");
 
-    let Setting { id: _, log_channel_id: _, moderation_channel_id: _, music_order_channel_id, music_log_channel_id: _, } = sqlx::query_as::<_, Setting>("SELECT music_order_channel_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(message.guild_id.expect("This should be called only on guilds").to_string()).fetch_one(connection).await.expect("Query should be correct");
+    let Setting { id: _, log_channel_id: _, moderation_channel_id: _, music_order_channel_id, music_log_channel_id: _, member_role_id: _ } = sqlx::query_as::<_, Setting>("SELECT music_order_channel_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(message.guild_id.expect("This should be called only on guilds").to_string()).fetch_one(connection).await.expect("Query should be correct");
     if let Some(channel_id) = music_order_channel_id.0 {
         if channel_id == message.channel_id.0 {
             return Ok(());
@@ -55,7 +55,7 @@ async fn get_music_log_channel(guild_id: GuildId) -> Option<ChannelId> {
         .get()
         .expect("Connection should be established at this moment");
 
-    let Setting { id: _, moderation_channel_id: _, log_channel_id: _, music_order_channel_id: _, music_log_channel_id } = sqlx::query_as::<_, Setting>("SELECT music_log_channel_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
+    let Setting { id: _, moderation_channel_id: _, log_channel_id: _, music_order_channel_id: _, music_log_channel_id, member_role_id: _ } = sqlx::query_as::<_, Setting>("SELECT music_log_channel_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
     music_log_channel_id.0.map(ChannelId)
 }
 
@@ -169,10 +169,7 @@ pub async fn join(ctx: &Context, message: &Message, _: Args) -> CommandResult {
     {
         if let Some(channel_id) = get_music_log_channel(guild_id).await {
             channel_id
-                .say(
-                    &ctx.http,
-                    format!("{}join {}", prefix, voice_channel_id),
-                )
+                .say(&ctx.http, format!("{}join {}", prefix, voice_channel_id))
                 .await?;
             message
                 .channel_id
@@ -192,11 +189,12 @@ pub async fn join(ctx: &Context, message: &Message, _: Args) -> CommandResult {
                 .await?;
             sqlx::query(
                 "
-                INSERT INTO channels VALUES (?);
+                INSERT INTO channels VALUES (?, ?);
                 UPDATE music_bots SET on_channel_id = ? WHERE guild_id = ? AND prefix = ?;
             ",
             )
             .bind(voice_channel_id.to_string())
+            .bind(guild_id.to_string())
             .bind(voice_channel_id.to_string())
             .bind(guild_id.to_string())
             .bind(prefix.clone())
@@ -247,10 +245,7 @@ pub async fn leave(ctx: &Context, message: &Message, _: Args) -> CommandResult {
     {
         if let Some(channel_id) = get_music_log_channel(guild_id).await {
             channel_id
-                .say(
-                    &ctx.http,
-                    format!("{}leave {}", prefix, voice_channel_id),
-                )
+                .say(&ctx.http, format!("{}leave {}", prefix, voice_channel_id))
                 .await?;
             message
                 .channel_id

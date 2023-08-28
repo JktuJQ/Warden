@@ -5,7 +5,7 @@ use crate::{
     bot::music_playing::*,
     db::{
         connections::SERVERS_DB,
-        models::{Id, Setting},
+        models::{Id, Setting, UnregisteredMember},
     },
     logger,
 };
@@ -15,8 +15,8 @@ use serenity::{
     model::{
         channel::Message,
         gateway::Ready,
-        guild::Guild,
-        id::{ChannelId, GuildId},
+        guild::{Guild, Member},
+        id::{ChannelId, GuildId, RoleId, UserId},
     },
 };
 use sqlx::SqlitePool;
@@ -51,9 +51,9 @@ impl EventHandler for Handler {
         }
         sqlx::query(
             "
-            INSERT INTO settings VALUES (NULL, NULL, NULL, NULL, NULL);
+            INSERT INTO settings VALUES (NULL, NULL, NULL, NULL, NULL, NULL);
             INSERT INTO guilds VALUES (?, (SELECT last_insert_rowid()));
-            INSERT INTO music_bots VALUES (?, 'music1 ', 0, NULL), (?, 'music2 ', 0, NULL), (?, 'music3 ', 0, NULL);
+            INSERT INTO music_bots VALUES (?, 'music1 ', NULL), (?, 'music2 ', NULL), (?, 'music3 ', NULL);
         ",
         )
         .bind(guild_id.to_string())
@@ -69,14 +69,114 @@ impl EventHandler for Handler {
         );
         logger::log(log::Level::Info, &format!("On {} guild ready", guild.name));
     }
+
+    async fn guild_member_addition(&self, ctx: Context, member: Member) {
+        let connection: &SqlitePool = SERVERS_DB
+        .get()
+        .expect("Connection should be established at this moment");
+
+        logger::log_discord(
+            &ctx.http,
+            member.guild_id,
+                "guild_member_addition was called"
+            )
+        .await;
+
+        let message: String = format!("Welcome to '{}' server!\nPlease, dm me your real name in following form -> '-name <your_name>', e.g. '-name Ваня'", member.guild_id.name(&ctx.cache).expect("This can be called only on guild"));
+        if let Err(why) = member.user.dm(&ctx, |m| m.content(&message)).await {
+
+            let Setting { id: _, moderation_channel_id: _, log_channel_id: _, music_order_channel_id: _, music_log_channel_id: _, member_role_id } = sqlx::query_as::<_, Setting>("SELECT member_role_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(member.guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
+            let member_role_id: RoleId = RoleId::from(Id(member_role_id
+                .0
+                .expect("member_role_id should be set at this moment")));
+            let member_roles: Vec<RoleId> = {
+                let mut vec: Vec<RoleId> = member.roles;
+                vec.push(member_role_id);
+                vec
+            };
+            let _ = member
+                .guild_id
+                .edit_member(&ctx.http, member.user.id, |m| {
+                    m.roles(&member_roles)
+                        .nickname(format!("<{}>", member.user.name))
+                })
+                .await;
+            logger::log_discord(
+                &ctx.http,
+                member.guild_id,
+                &format!(
+                    "Registered new member('{}') due to {} error",
+                    member.user.name, why
+                ),
+            )
+            .await;
+        }
+        else {
+            sqlx::query("INSERT INTO unregistered_members VALUES (?, ?)").bind(member.user.id.to_string()).bind(member.guild_id.to_string()).execute(connection).await.expect("Query should be correct");
+        }
+    }
+
+    async fn message(&self, ctx: Context, message: Message) {
+        if message.guild_id.is_some() {
+            return;
+        }
+
+        let connection: &SqlitePool = SERVERS_DB
+            .get()
+            .expect("Connection should be established at this moment");
+
+        let command: Vec<&str> = message.content[crate::MAIN_BOT_PREFIX.len()..]
+            .split_whitespace()
+            .collect::<Vec<&str>>();
+        let members: Vec<UnregisteredMember> = sqlx::query_as::<_, UnregisteredMember>(
+            "SELECT * FROM unregistered_members WHERE discord_id = ?",
+        )
+        .bind(message.author.id.to_string())
+        .fetch_all(connection)
+        .await
+        .expect("Query should be correct");
+        match command[0] {
+            "name" => {
+                for member in members {
+                    let member: Member = GuildId::from(member.guild_id)
+                        .member(&ctx, UserId::from(member.discord_id))
+                        .await
+                        .expect("Member data should be correct");
+                    let Setting { id: _, moderation_channel_id: _, log_channel_id: _, music_order_channel_id: _, music_log_channel_id: _, member_role_id } = sqlx::query_as::<_, Setting>("SELECT member_role_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(member.guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
+                    let member_role_id: RoleId = RoleId::from(Id(member_role_id
+                        .0
+                        .expect("member_role_id should be set at this moment")));
+                    let member_roles: Vec<RoleId> = {
+                        let mut vec: Vec<RoleId> = member.roles;
+                        vec.push(member_role_id);
+                        vec
+                    };
+                    let _ = member
+                        .guild_id
+                        .edit_member(&ctx.http, member.user.id, |m| {
+                            m.roles(&member_roles)
+                                .nickname(format!("{} <{}>", command[1], member.user.name))
+                        })
+                        .await;
+                    logger::log_discord(
+                        &ctx.http,
+                        member.guild_id,
+                        &format!("Registered new member('{}')", member.user.name),
+                    )
+                    .await;
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
-pub async fn check_music_log_channel(guild_id: GuildId, channel_id: ChannelId) -> bool {
+async fn check_music_log_channel(guild_id: GuildId, channel_id: ChannelId) -> bool {
     let connection: &SqlitePool = SERVERS_DB
         .get()
         .expect("Connection should be established at this moment");
 
-    let Setting { id: _, moderation_channel_id: _, log_channel_id: _, music_order_channel_id: _, music_log_channel_id } = sqlx::query_as::<_, Setting>("SELECT music_log_channel_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
+    let Setting { id: _, moderation_channel_id: _, log_channel_id: _, music_order_channel_id: _, music_log_channel_id, member_role_id: _ } = sqlx::query_as::<_, Setting>("SELECT music_log_channel_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
     if let Some(music_log_channel_id) = music_log_channel_id.0 {
         if music_log_channel_id == channel_id.0 {
             return true;

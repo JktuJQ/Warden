@@ -1,7 +1,7 @@
 //! `models` module provides Rust representation of database tables.
 //!
 
-use serenity::model::id::{ChannelId, GuildId};
+use serenity::model::id::{ChannelId, GuildId, RoleId, UserId};
 use sqlx::FromRow;
 use std::{
     num::{ParseIntError, TryFromIntError},
@@ -41,6 +41,16 @@ impl From<Id> for ChannelId {
         ChannelId(value.0)
     }
 }
+impl From<RoleId> for Id {
+    fn from(value: RoleId) -> Self {
+        Id(value.0)
+    }
+}
+impl From<Id> for RoleId {
+    fn from(value: Id) -> Self {
+        RoleId(value.0)
+    }
+}
 impl From<GuildId> for Id {
     fn from(value: GuildId) -> Self {
         Id(value.0)
@@ -49,6 +59,16 @@ impl From<GuildId> for Id {
 impl From<Id> for GuildId {
     fn from(value: Id) -> Self {
         GuildId(value.0)
+    }
+}
+impl From<UserId> for Id {
+    fn from(value: UserId) -> Self {
+        Id(value.0)
+    }
+}
+impl From<Id> for UserId {
+    fn from(value: Id) -> Self {
+        UserId(value.0)
     }
 }
 
@@ -72,6 +92,18 @@ impl TryFrom<Option<i64>> for ForeignId {
 pub struct Channel {
     #[sqlx(try_from = "i64", default)]
     pub discord_id: Id,
+
+    #[sqlx(try_from = "i64", default)]
+    pub guild_id: Id,
+}
+
+#[derive(Debug, FromRow)]
+pub struct Role {
+    #[sqlx(try_from = "i64", default)]
+    pub discord_id: Id,
+
+    #[sqlx(try_from = "i64", default)]
+    pub guild_id: Id,
 }
 
 #[derive(Debug, FromRow)]
@@ -99,6 +131,9 @@ pub struct Setting {
 
     #[sqlx(try_from = "Option<i64>", default)]
     pub music_log_channel_id: ForeignId,
+
+    #[sqlx(try_from = "Option<i64>", default)]
+    pub member_role_id: ForeignId,
 }
 
 #[derive(Debug, FromRow)]
@@ -111,4 +146,13 @@ pub struct MusicBot {
 
     #[sqlx(try_from = "Option<i64>", default)]
     pub on_channel_id: ForeignId,
+}
+
+#[derive(Debug, FromRow)]
+pub struct UnregisteredMember {
+    #[sqlx(try_from = "i64", default)]
+    pub discord_id: Id,
+
+    #[sqlx(try_from = "i64", default)]
+    pub guild_id: Id,
 }
