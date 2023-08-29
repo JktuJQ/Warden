@@ -15,7 +15,7 @@ use serenity::{
     model::{
         channel::Message,
         gateway::Ready,
-        guild::{Guild, Member},
+        guild::{Guild, Member, UnavailableGuild},
         id::{ChannelId, GuildId, RoleId, UserId},
     },
 };
@@ -70,21 +70,38 @@ impl EventHandler for Handler {
         logger::log(log::Level::Info, &format!("On {} guild ready", guild.name));
     }
 
+    async fn guild_delete(&self, _: Context, incomplete: UnavailableGuild, _: Option<Guild>) {
+        let connection: &SqlitePool = SERVERS_DB
+            .get()
+            .expect("Connection should be established at this point");
+
+        sqlx::query(
+            "DELETE FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)",
+        )
+        .bind(incomplete.id.to_string())
+        .execute(connection)
+        .await
+        .expect("Query should be correct");
+        logger::log(
+            log::Level::Info,
+            &format!("Unregistered MAIN_BOT from '{}' guild", incomplete.id),
+        );
+    }
+
     async fn guild_member_addition(&self, ctx: Context, member: Member) {
         let connection: &SqlitePool = SERVERS_DB
-        .get()
-        .expect("Connection should be established at this moment");
+            .get()
+            .expect("Connection should be established at this moment");
 
         logger::log_discord(
             &ctx.http,
             member.guild_id,
-                "guild_member_addition was called"
-            )
+            "guild_member_addition was called",
+        )
         .await;
 
         let message: String = format!("Welcome to '{}' server!\nPlease, dm me your real name in following form -> '-name <your_name>', e.g. '-name Ваня'", member.guild_id.name(&ctx.cache).expect("This can be called only on guild"));
         if let Err(why) = member.user.dm(&ctx, |m| m.content(&message)).await {
-
             let Setting { id: _, moderation_channel_id: _, log_channel_id: _, music_order_channel_id: _, music_log_channel_id: _, member_role_id } = sqlx::query_as::<_, Setting>("SELECT member_role_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(member.guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
             let member_role_id: RoleId = RoleId::from(Id(member_role_id
                 .0
@@ -110,9 +127,13 @@ impl EventHandler for Handler {
                 ),
             )
             .await;
-        }
-        else {
-            sqlx::query("INSERT INTO unregistered_members VALUES (?, ?)").bind(member.user.id.to_string()).bind(member.guild_id.to_string()).execute(connection).await.expect("Query should be correct");
+        } else {
+            sqlx::query("INSERT INTO unregistered_members VALUES (?, ?)")
+                .bind(member.user.id.to_string())
+                .bind(member.guild_id.to_string())
+                .execute(connection)
+                .await
+                .expect("Query should be correct");
         }
     }
 
@@ -158,6 +179,11 @@ impl EventHandler for Handler {
                                 .nickname(format!("{} <{}>", command[1], member.user.name))
                         })
                         .await;
+                    sqlx::query("DELETE FROM unregistered_members WHERE discord_id = ?")
+                        .bind(member.user.id.to_string())
+                        .execute(connection)
+                        .await
+                        .expect("Query should be correct");
                     logger::log_discord(
                         &ctx.http,
                         member.guild_id,
@@ -192,6 +218,23 @@ impl EventHandler for MusicHandler1 {
         logger::log(
             log::Level::Info,
             &format!("{} is connected!", ready.user.name),
+        );
+    }
+
+    async fn guild_delete(&self, _: Context, incomplete: UnavailableGuild, _: Option<Guild>) {
+        let connection: &SqlitePool = SERVERS_DB
+            .get()
+            .expect("Connection should be established at this point");
+
+        sqlx::query("DELETE FROM music_bots WHERE prefix = ? AND guild_id = ?")
+        .bind(crate::MUSIC_BOT_PREFIXES[0].to_string())
+        .bind(incomplete.id.to_string())
+        .execute(connection)
+        .await
+        .expect("Query should be correct");
+        logger::log(
+            log::Level::Info,
+            &format!("Unregistered MUSIC1_BOT from '{}' guild", incomplete.id),
         );
     }
 
@@ -240,6 +283,23 @@ impl EventHandler for MusicHandler2 {
         );
     }
 
+    async fn guild_delete(&self, _: Context, incomplete: UnavailableGuild, _: Option<Guild>) {
+        let connection: &SqlitePool = SERVERS_DB
+            .get()
+            .expect("Connection should be established at this point");
+
+        sqlx::query("DELETE FROM music_bots WHERE prefix = ? AND guild_id = ?")
+        .bind(crate::MUSIC_BOT_PREFIXES[1].to_string())
+        .bind(incomplete.id.to_string())
+        .execute(connection)
+        .await
+        .expect("Query should be correct");
+        logger::log(
+            log::Level::Info,
+            &format!("Unregistered MUSIC1_BOT from '{}' guild", incomplete.id),
+        );
+    }
+
     async fn message(&self, ctx: Context, message: Message) {
         if message.guild_id.is_none()
             || !check_music_log_channel(
@@ -282,6 +342,23 @@ impl EventHandler for MusicHandler3 {
         logger::log(
             log::Level::Info,
             &format!("{} is connected!", ready.user.name),
+        );
+    }
+
+    async fn guild_delete(&self, _: Context, incomplete: UnavailableGuild, _: Option<Guild>) {
+        let connection: &SqlitePool = SERVERS_DB
+            .get()
+            .expect("Connection should be established at this point");
+
+        sqlx::query("DELETE FROM music_bots WHERE prefix = ? AND guild_id = ?")
+        .bind(crate::MUSIC_BOT_PREFIXES[2].to_string())
+        .bind(incomplete.id.to_string())
+        .execute(connection)
+        .await
+        .expect("Query should be correct");
+        logger::log(
+            log::Level::Info,
+            &format!("Unregistered MUSIC1_BOT from '{}' guild", incomplete.id),
         );
     }
 
