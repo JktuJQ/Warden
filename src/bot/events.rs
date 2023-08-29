@@ -47,6 +47,7 @@ impl EventHandler for Handler {
             .is_some()
         {
             logger::log(log::Level::Info, &format!("On {} guild ready", guild.name));
+            sqlx::query("UPDATE music_bots SET on_channel_id = NULL WHERE guild_id = ?").bind(guild_id.to_string()).execute(connection).await.expect("Query should be correct");
             return;
         }
         sqlx::query(
