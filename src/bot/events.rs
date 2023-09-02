@@ -103,7 +103,7 @@ impl EventHandler for Handler {
 
         let message: String = format!("Welcome to '{}' server!\nPlease, dm me your real name in following form -> '-name <your_name>', e.g. '-name Ваня'", member.guild_id.name(&ctx.cache).expect("This can be called only on guild"));
         if let Err(why) = member.user.dm(&ctx, |m| m.content(&message)).await {
-            let Setting { id: _, moderation_channel_id: _, log_channel_id: _, music_order_channel_id: _, music_log_channel_id: _, member_role_id } = sqlx::query_as::<_, Setting>("SELECT member_role_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(member.guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
+            let Setting { member_role_id, .. } = sqlx::query_as::<_, Setting>("SELECT member_role_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(member.guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
             let member_role_id: RoleId = RoleId::from(Id(member_role_id
                 .0
                 .expect("member_role_id should be set at this moment")));
@@ -164,7 +164,7 @@ impl EventHandler for Handler {
                         .member(&ctx, UserId::from(member.discord_id))
                         .await
                         .expect("Member data should be correct");
-                    let Setting { id: _, moderation_channel_id: _, log_channel_id: _, music_order_channel_id: _, music_log_channel_id: _, member_role_id } = sqlx::query_as::<_, Setting>("SELECT member_role_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(member.guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
+                    let Setting { member_role_id, .. } = sqlx::query_as::<_, Setting>("SELECT member_role_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(member.guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
                     let member_role_id: RoleId = RoleId::from(Id(member_role_id
                         .0
                         .expect("member_role_id should be set at this moment")));
@@ -203,7 +203,7 @@ async fn check_music_log_channel(guild_id: GuildId, channel_id: ChannelId) -> bo
         .get()
         .expect("Connection should be established at this moment");
 
-    let Setting { id: _, moderation_channel_id: _, log_channel_id: _, music_order_channel_id: _, music_log_channel_id, member_role_id: _ } = sqlx::query_as::<_, Setting>("SELECT music_log_channel_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
+    let Setting { music_log_channel_id, .. } = sqlx::query_as::<_, Setting>("SELECT music_log_channel_id FROM settings WHERE id = (SELECT settings_id FROM guilds WHERE discord_id = ?)").bind(guild_id.to_string()).fetch_one(connection).await.expect("Query should be correct");
     if let Some(music_log_channel_id) = music_log_channel_id.0 {
         if music_log_channel_id == channel_id.0 {
             return true;
